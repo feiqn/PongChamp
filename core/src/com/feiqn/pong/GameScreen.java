@@ -1,12 +1,15 @@
 package com.feiqn.pong;
 
 import com.badlogic.gdx.*;
+import com.badlogic.gdx.utils.*;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.scenes.scene2d.*;
+import com.badlogic.gdx.utils.Timer.*;
+import java.util.Random;
 
 public class GameScreen extends ScreenAdapter {
 
@@ -19,23 +22,16 @@ public class GameScreen extends ScreenAdapter {
     float yMiddle = Gdx.graphics.getHeight() * .5f;
     float xSpeed = 4f;
     float ySpeed = 3f;
+    int p1Score, p2Score = 0;
     float paddle1Y, paddle2Y, ballY = yMiddle;
     boolean p1UpMove, p1DownMove, p2UpMove, p2DownMove;
+    Random random;
 
 
     public GameScreen(PongGame game) { this.game = game; }
 
     public static void setMultiplayer() {
         multiplayer = true;
-    }
-
-    public void collisionDetection() {
-        if(Intersector.overlaps(foresight.getBoundingRectangle(), p1.getBoundingRectangle())) {
-            xSpeed *= -1f;
-        }
-        if(Intersector.overlaps(foresight.getBoundingRectangle(), p2.getBoundingRectangle())) {
-            xSpeed *= -1f;
-        }
     }
 
     @Override
@@ -105,42 +101,68 @@ public class GameScreen extends ScreenAdapter {
         });
     }
 
+    public void reset() { // TODO: display score, game over screen?
+        ballY = yMiddle;
+        ballX = xMiddle;
+        xSpeed = 0;
+        ySpeed = 0;
+        Timer.schedule(new Task() { // kick off the ball once it has been reset
+            public void run() {
+                random = new Random();
+                xSpeed = random.nextInt(6) + 2;
+                ySpeed = random.nextInt(4) + 2;
+            }
+        }, 2f);
+    }
+
     @Override
     public void render(float delta) {
 
-        foresight.setPosition(ballX + xSpeed, ballY + ySpeed);
+        foresight.setPosition(ballX + xSpeed, ballY + ySpeed); // predict if the ball would collide with either paddle, 1 frame early
 
         p1.setPosition(paddle1X, paddle1Y);
         p2.setPosition(paddle2X, paddle2Y);
 
         ball.setPosition(ballX, ballY);
 
-        collisionDetection();
+        //ball collision
+        if(Intersector.overlaps(foresight.getBoundingRectangle(), p1.getBoundingRectangle()) || Intersector.overlaps(foresight.getBoundingRectangle(), p2.getBoundingRectangle())) { // bounce off the paddles
+            xSpeed *= -1f;
+            if(xSpeed > 0 && xSpeed < 13f) { // speed up
+                xSpeed *= 1.2f;
+            } else if(xSpeed < 0 && xSpeed > -13f) {
+                xSpeed *= 1.2f;
+            }
+        } // TODO: fix bouncing off top & bottom of paddles (ballX > paddleX ...)
+        if(ballX < 0) { // score
+            xSpeed *= -1f;
+            p2Score++;
+            reset();
+        } else if(ballX > Gdx.graphics.getWidth()) {
+            xSpeed *= -1f;
+            p1Score++;
+            reset();
+        }
+        if(ballY < 0 || ballY > Gdx.graphics.getHeight()) { // bounce off the walls
+            ySpeed *= -1f;
+        }
 
         ballX += xSpeed;
         ballY += ySpeed;
 
-        //ball collision
-        if(ballX < 0 || ballX > Gdx.graphics.getWidth()) {
-            xSpeed *= -1f;
-        } // TODO: later this should score instead of bounce back
-        if(ballY < 0 || ballY > Gdx.graphics.getHeight()) {
-            ySpeed *= -1f;
-        }
-
-        //p1 movement
-        if(p1UpMove && paddle1Y < Gdx.graphics.getHeight() - 100f) {
+        // p1 movement
+        if(p1UpMove && paddle1Y < Gdx.graphics.getHeight() - 101f) {
             paddle1Y += 300f * Gdx.graphics.getDeltaTime();
         } else if(p1DownMove && paddle1Y > 0) {
             paddle1Y -= 300f * Gdx.graphics.getDeltaTime();
         }
 
         // p2 movement
-        if(p2UpMove && paddle2Y < Gdx.graphics.getHeight() - 100f) {
+        if(p2UpMove && paddle2Y < Gdx.graphics.getHeight() - 101f) {
             paddle2Y += 300f * Gdx.graphics.getDeltaTime();
         } else if(p2DownMove && paddle2Y > 0) {
             paddle2Y -= 300f * Gdx.graphics.getDeltaTime();
-        }
+        } // TODO: single-player ai
 
         Gdx.gl.glClearColor(0,0,0,1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -156,6 +178,7 @@ public class GameScreen extends ScreenAdapter {
     @Override
     public void hide() {
         Gdx.input.setInputProcessor(null);
+        game.batch.dispose();
     }
 
 }

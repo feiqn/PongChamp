@@ -7,6 +7,10 @@ import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.graphics.g2d.freetype.*;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
+/*
+*  This is my very first ever LibGDX project, made mostly
+*  to learn and play around with the framework.
+*/
 public class PongGame extends Game { // TODO: set screen size
 	SpriteBatch batch;
 	ShapeRenderer shapeRenderer;
